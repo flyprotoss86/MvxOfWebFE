@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/axios/0.17.1/axios.min.js"></script>
+  <title>JS Bin</title>
+</head>
+
+<body>
+  <div id="app">
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    axios.interceptors.response.use(function (response) {
+      let {
+        config: {
+          url,
+          method,
+          data
+        }
+      } = response
+      data = JSON.parse(data || '{}')
+      let row = {
+        id: 1,
+        bookname: 'JavaScript高级程序设计',
+        booknumber: 2
+      }
+      if (url === '/books/1' && method === 'get') {
+        response.data = row
+      } else if (url === '/books/1' && method === 'put') {
+        response.data = Object.assign(row, data)
+      }
+      return response
+    })
+
+
+    function fetchDb() {
+      return axios.get('/books/1')
+    }
+
+    function saveDb(newData) {
+      return axios.put('/books/1', newData)
+    }
+    var pageTemplate =
+      `
+书名：《__bookname__》, 数量：<span id="bookNum">__booknum__</span><br>
+<button id="btnAdd">加1</button>
+<button id="btnMinus">减1</button>
+<button id="btnSquare">平方</button>
+<button id="btnCube">立方</button>
+<button id="btnResetZero">归0</button>`
+
+    $(document).ready(function () {
+      fetchDb().then((res) => {
+        $('#app').append(pageTemplate
+          .replace('__bookname__', res.data.bookname)
+          .replace('__booknum__', res.data.booknumber)
+        )
+        $('#btnAdd').on('click', () => {
+          var oldValue = parseInt($('#bookNum').text())
+          var newValue = oldValue + 1
+          saveDb({
+            number: newValue
+          }).then(
+            $('#bookNum').text(newValue)
+          )
+        })
+        $('#btnMinus').on('click', () => {
+          var oldValue = parseInt($('#bookNum').text())
+          var newValue = oldValue - 1
+          saveDb({
+            number: newValue
+          }).then(
+            $('#bookNum').text(newValue)
+          )
+        })
+        $('#btnSquare').on('click', () => {
+          var oldValue = parseInt($('#bookNum').text())
+          var newValue = Math.pow(oldValue, 2)
+          saveDb({
+            number: newValue
+          }).then(
+            $('#bookNum').text(newValue)
+          )
+        })
+        $('#btnCube').on('click', () => {
+          var oldValue = parseInt($('#bookNum').text())
+          var newValue = Math.pow(oldValue, 3)
+          saveDb({
+            number: newValue
+          }).then(
+            $('#bookNum').text(newValue)
+          )
+        })
+        $('#btnResetZero').on('click', () => {
+          var newValue = 0
+          saveDb({
+            number: newValue
+          }).then(
+            $('#bookNum').text(newValue)
+          )
+        })
+      })
+    })
+  </script>
+</body>
+
+</html>

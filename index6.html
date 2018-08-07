@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/axios/0.17.1/axios.min.js"></script>
+  <script src="https://cdn.bootcss.com/vue/2.5.13/vue.min.js"></script>
+  <title>JS Bin</title>
+</head>
+
+<body>
+  <div id="app">
+
+  </div>
+
+  <div id="status"></div>
+
+
+
+
+  <script>
+    axios.interceptors.response.use(function (response) {
+      let {
+        config: {
+          url,
+          method,
+          data
+        }
+      } = response
+      data = JSON.parse(data || '{}')
+      let row = {
+        id: 1,
+        bookname: 'JavaScript高级程序设计',
+        booknumber: 2
+      }
+      if (url === '/books/1' && method === 'get') {
+        response.data = row
+      } else if (url === '/books/1' && method === 'put') {
+        response.data = Object.assign(row, data)
+      }
+      return response
+    })
+
+
+
+
+    class EventHub {
+      constructor() {
+        this.events = {}
+      }
+      on(eventName, handler) {
+        if (!this.events[eventName]) {
+          this.events[eventName] = []
+        }
+        this.events[eventName].push(handler)
+      }
+      emmit(eventName, ...eventArgs) {
+        let handlers = this.events[eventName]
+        if (handlers) {
+          handlers.forEach(handler => {
+            handler.apply(null, eventArgs)
+          })
+        }
+      }
+    }
+
+
+
+
+
+    class Model extends EventHub {
+      constructor({
+        source,
+        data
+      }) {
+        super()
+        this.source = source
+        this.data = data
+      }
+      fetchDb(id) {
+        this.data.id = id
+        return axios.get(`/${this.source}/${this.data.id}`).then((res) => {
+          this.emmit('changed', res.data)
+        })
+      }
+      saveDb() {
+        return axios.put(`/${this.source}/${this.data.id}`, this.data).then((res) => {
+          console.log(res.data)
+          this.emmit('changed', res.data)
+        })
+      }
+    }
+
+
+    let model = new Model({
+      source: 'books',
+      data: {
+        id: undefined,
+        bookname: undefined,
+        booknum: undefined,
+      }
+    })
+
+
+    var view = new Vue({
+      el: '#app',
+      data: {
+        bookname: '',
+        booknumber: 0
+      },
+      template: `<div>书名：《{{bookname}}》, 数量：<span id="bookNum">{{booknumber}}</span><br>
+<button id="btnAdd" v-on:click="onBtnAddClick">加1</button>
+<button id="btnMinus" v-on:click="onBtnMinusClick">减1</button>
+<button id="btnSquare" v-on:click="onBtnSquareClick">平方</button>
+<button id="btnCube" v-on:click="onBtnCubeClick">立方</button>
+<button id="btnResetZero" v-on:click="onBtnResetZeroClick">归0</button></div>`,
+      created() {
+        model.on('changed', (data) => {
+          console.log(data)
+          model.data.id = data.id
+          model.data.bookname = data.bookname
+          model.data.booknumber = data.booknumber
+          view.bookname = model.data.bookname
+          view.booknumber = model.data.booknumber
+        })
+        model.fetchDb(1)
+      },
+      methods: {
+        onBtnAddClick() {
+          console.log('add')
+          model.data.booknumber++
+            this.updateModel()
+        },
+        onBtnMinusClick() {
+          model.data.booknumber--
+            this.updateModel()
+        },
+        onBtnSquareClick() {
+          model.data.booknumber = Math.pow(model.data.booknumber, 2)
+          this.updateModel()
+        },
+        onBtnCubeClick() {
+          model.data.booknumber = Math.pow(model.data.booknumber, 3)
+          this.updateModel()
+        },
+        onBtnResetZeroClick() {
+          model.data.booknumber = 0
+          this.updateModel()
+        },
+        updateModel() {
+          model.saveDb()
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>

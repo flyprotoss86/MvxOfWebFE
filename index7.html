@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/axios/0.17.1/axios.min.js"></script>
+  <script src="https://cdn.bootcss.com/vue/2.5.13/vue.min.js"></script>
+  <title>JS Bin</title>
+</head>
+
+<body>
+  <div id="app">
+
+  </div>
+
+  <div id="status"></div>
+
+
+
+
+  <script>
+    axios.interceptors.response.use(function (response) {
+      let {
+        config: {
+          url,
+          method,
+          data
+        }
+      } = response
+      data = JSON.parse(data || '{}')
+      let row = {
+        id: 1,
+        bookname: 'JavaScript高级程序设计',
+        booknumber: 2
+      }
+      if (url === '/books/1' && method === 'get') {
+        response.data = row
+      } else if (url === '/books/1' && method === 'put') {
+        response.data = Object.assign(row, data)
+      }
+      return response
+    })
+
+
+
+
+
+
+
+    class Model {
+      constructor(source) {
+        this.source = source
+      }
+      fetchDb(id) {
+        return axios.get(`/${this.source}/${id}`)
+      }
+      saveDb(data) {
+        return axios.put(`/${this.source}/${data.id}`, data)
+      }
+    }
+    let model = new Model('books')
+
+
+    var view = new Vue({
+      el: '#app',
+      data: {
+        book: {
+          id: 0,
+          bookname: '',
+          booknumber: 0
+        }
+      },
+      template: `<div>书名：《{{book.bookname}}》, 数量：<span id="bookNum">{{book.booknumber}}</span><br>
+<button id="btnAdd" v-on:click="onBtnAddClick">加1</button>
+<button id="btnMinus" v-on:click="onBtnMinusClick">减1</button>
+<button id="btnSquare" v-on:click="onBtnSquareClick">平方</button>
+<button id="btnCube" v-on:click="onBtnCubeClick">立方</button>
+<button id="btnResetZero" v-on:click="onBtnResetZeroClick">归0</button></div>`,
+      created() {
+        model.fetchDb(1).then(res => {
+          this.book.id = res.data.id
+          this.book.bookname = res.data.bookname
+          this.book.booknumber = res.data.booknumber
+        })
+      },
+      methods: {
+        onBtnAddClick() {
+          console.log('add')
+          this.updateModel({
+            booknumber: this.book.booknumber + 1
+          })
+        },
+        onBtnMinusClick() {
+          this.updateModel({
+            booknumber: this.book.booknumber - 1
+          })
+        },
+        onBtnSquareClick() {
+          this.updateModel({
+            booknumber: Math.pow(this.book.booknumber, 2)
+          })
+        },
+        onBtnCubeClick() {
+          this.updateModel({
+            booknumber: Math.pow(this.book.booknumber, 2)
+          })
+        },
+        onBtnResetZeroClick() {
+          this.updateModel({
+            booknumber: 0
+          })
+        },
+        updateModel(changeData) {
+          model.saveDb(Object.assign({}, this.book, changeData)).then((res) => {
+            this.book.booknumber = res.data.booknumber
+          })
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>

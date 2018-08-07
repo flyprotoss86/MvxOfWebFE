@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/axios/0.17.1/axios.min.js"></script>
+  <title>JS Bin</title>
+</head>
+
+<body>
+  <div id="app">
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    axios.interceptors.response.use(function (response) {
+      let {
+        config: {
+          url,
+          method,
+          data
+        }
+      } = response
+      data = JSON.parse(data || '{}')
+      let row = {
+        id: 1,
+        bookname: 'JavaScript高级程序设计',
+        booknumber: 2
+      }
+      if (url === '/books/1' && method === 'get') {
+        response.data = row
+      } else if (url === '/books/1' && method === 'put') {
+        response.data = Object.assign(row, data)
+      }
+      return response
+    })
+
+
+    var model = {
+      source: 'books',
+
+      id: 0,
+      bookname: '',
+      booknumber: 0,
+
+
+      fetchDb(id) {
+        this.id = id
+        return axios.get(`/${this.source}/${this.id}`)
+      },
+      saveDb() {
+        return axios.put(`/${this.source}/${this.id}`, this)
+      }
+    }
+
+    var view = {
+      el: '#app',
+      template: `书名：《__bookname__》, 数量：<span id="bookNum">__booknumber__</span><br>
+<button id="btnAdd">加1</button>
+<button id="btnMinus">减1</button>
+<button id="btnSquare">平方</button>
+<button id="btnCube">立方</button>
+<button id="btnResetZero">归0</button>`,
+      render: function (data) {
+
+        $(this.el).html(this.template.replace('__bookname__', data.bookname).replace('__booknumber__', data.booknumber))
+      }
+    }
+
+    var controller = {
+      init(model, view) {
+        this.model = model
+        this.view = view
+        //this.view.render(this.model)
+        this.bindEvents()
+        this.fetchModel()
+      },
+      fetchModel() {
+        this.model.fetchDb(1).then(res => {
+          this.model.id = res.data.id
+          this.model.bookname = res.data.bookname
+          this.model.booknumber = res.data.booknumber
+          this.view.render(this.model)
+        })
+      },
+      bindEvents() {
+        this.events.forEach((o) => {
+          $(this.view.el).on(o.event, o.selector, this[o.handler].bind(this))
+        })
+      },
+      events: [{
+          selector: '#btnAdd',
+          event: 'click',
+          handler: 'onBtnAddClick'
+        },
+        {
+          selector: '#btnMinus',
+          event: 'click',
+          handler: 'onBtnMinusClick'
+        },
+        {
+          selector: '#btnSquare',
+          event: 'click',
+          handler: 'onBtnSquareClick'
+        },
+        {
+          selector: '#btnCube',
+          event: 'click',
+          handler: 'onBtnCubeClick'
+        },
+        {
+          selector: '#btnResetZero',
+          event: 'click',
+          handler: 'onBtnResetZeroClick'
+        }
+      ],
+      onBtnAddClick() {
+        model.booknumber++
+          model.saveDb().then((res) => {
+            $('#bookNum').text(res.data.booknumber)
+          })
+      },
+      onBtnMinusClick() {
+        model.booknumber--
+          model.saveDb().then(this.view.render(this.model))
+      },
+      onBtnSquareClick() {
+        model.booknumber = Math.pow(model.booknumber, 2)
+        model.saveDb().then(this.view.render(this.model))
+      },
+      onBtnCubeClick() {
+        model.booknumber = Math.pow(model.booknumber, 3)
+        model.saveDb().then(this.view.render(this.model))
+      },
+      onBtnResetZeroClick() {
+        model.booknumber = 0
+        model.saveDb().then(this.view.render(this.model))
+      }
+    }
+
+    controller.init(model, view)
+  </script>
+</body>
+
+</html>

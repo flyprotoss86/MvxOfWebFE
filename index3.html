@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.bootcss.com/axios/0.17.1/axios.min.js"></script>
+  <title>JS Bin</title>
+</head>
+
+<body>
+  <div id="app">
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    axios.interceptors.response.use(function (response) {
+      let {
+        config: {
+          url,
+          method,
+          data
+        }
+      } = response
+      data = JSON.parse(data || '{}')
+      let row = {
+        id: 1,
+        bookname: 'JavaScript高级程序设计',
+        booknumber: 2
+      }
+      if (url === '/books/1' && method === 'get') {
+        response.data = row
+      } else if (url === '/books/1' && method === 'put') {
+        response.data = Object.assign(row, data)
+      }
+      return response
+    })
+
+    class View {
+      constructor(el, template) {
+        this.el = el
+        this.template = template
+      }
+      render(data) {
+        let html = this.template
+        for (let key in data) {
+          html = html.replace(`__${key}__`, data[key])
+        }
+        $(this.el).html(html)
+      }
+    }
+
+    class Controller {
+      constructor({
+        model,
+        view,
+        events,
+        init,
+        ...rest
+      }) {
+        this.model = model
+        this.view = view
+        this.events = events
+        Object.assign(this, rest)
+        this.view.render(this.model)
+        this.bindEvents()
+        init.apply(this, arguments)
+      }
+      bindEvents() {
+        this.events.forEach(e => {
+          $(this.view.el).on(e.event, e.selector, this[e.handler].bind(this))
+        })
+      }
+    }
+
+    class Model {
+      constructor({
+        source,
+        data
+      }) {
+        this.source = source
+        this.data = data
+      }
+      fetchDb(id) {
+        this.data.id = id
+        return axios.get(`/${this.source}/${this.data.id}`)
+      }
+      saveDb() {
+        return axios.put(`/${this.source}/${this.data.id}`, this)
+      }
+    }
+
+
+    let view = new View('#app',
+      `书名：《__bookname__》, 数量：<span id="bookNum">__booknumber__</span><br>
+<button id="btnAdd">加1</button>
+<button id="btnMinus">减1</button>
+<button id="btnSquare">平方</button>
+<button id="btnCube">立方</button>
+<button id="btnResetZero">归0</button>`
+    )
+
+    let model = new Model({
+      source: 'books',
+      data: {
+        id: undefined,
+        bookname: undefined,
+        booknum: undefined,
+      }
+    })
+
+    let controller = new Controller({
+      model,
+      view,
+      events: [{
+          selector: '#btnAdd',
+          event: 'click',
+          handler: 'onBtnAddClick'
+        },
+        {
+          selector: '#btnMinus',
+          event: 'click',
+          handler: 'onBtnMinusClick'
+        },
+        {
+          selector: '#btnSquare',
+          event: 'click',
+          handler: 'onBtnSquareClick'
+        },
+        {
+          selector: '#btnCube',
+          event: 'click',
+          handler: 'onBtnCubeClick'
+        },
+        {
+          selector: '#btnResetZero',
+          event: 'click',
+          handler: 'onBtnResetZeroClick'
+        }
+      ],
+      init() {
+        this.model.fetchDb(1).then((res) => {
+          this.model.data.id = res.data.id
+          this.model.data.bookname = res.data.bookname
+          this.model.data.booknumber = res.data.booknumber
+          this.view.render(this.model.data)
+        })
+      },
+      onBtnAddClick() {
+        console.log('add')
+        this.model.data.booknumber++
+          this.updateModel()
+      },
+      onBtnMinusClick() {
+        this.model.data.booknumber--
+          this.updateModel()
+      },
+      onBtnSquareClick() {
+        this.model.data.booknumber = Math.pow(this.model.data.booknumber, 2)
+        this.updateModel()
+      },
+      onBtnCubeClick() {
+        this.model.data.booknumber = Math.pow(this.model.data.booknumber, 3)
+        this.updateModel()
+      },
+      onBtnResetZeroClick() {
+        this.model.data.booknumber = 0
+        this.updateModel()
+      },
+      updateModel() {
+        this.model.saveDb().then(this.view.render(this.model.data))
+      }
+    })
+  </script>
+</body>
+
+</html>
